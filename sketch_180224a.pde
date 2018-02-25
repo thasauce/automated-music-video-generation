@@ -5,7 +5,7 @@ import ddf.minim.spi.*;
 
 VideoExport videoExport;
 
-String audioFilePath = "test2.mp3";
+String audioFilePath = "test.mp3";
 
 String SEP = "|";
 float movieFPS = 60;
@@ -119,19 +119,19 @@ void draw() {
         // do something with value (set positions,
         // sizes, colors, angles, etc)
         pushMatrix();
-        translate(width/2, height/2);
+        translate(30, height/2);
         if(i%2 == 1) {
           // Left channel value
-          fill(255, 50, 20);
-          rotate(i * 0.05);
-          translate(50, 0);
-          rect(value * 5, -5, value * 4, 10);
+          fill(255, 255, 255);
+          rotate(PI/2);
+          translate(4, -13 + (-i * 9));
+          rect(0, -5, 4 + sqrt(value) * 10, 14);
         } else {
           // Right channel value
-          fill(20, 100, 250);
-          rotate(-i * 0.05);
-          translate(50, 0);
-          rect(value * 5, -5, value * 4, 10);
+          fill(255, 255, 250);
+          rotate(-PI/2);
+          translate(4, i * 9);
+          rect(0, -5, 4 + sqrt(value) * 10, 14);
         }
         popMatrix();
       }
@@ -164,8 +164,8 @@ void audioToTextFile(String fileName) {
   FFT fftL = new FFT(fftSize, sampleRate);
   FFT fftR = new FFT(fftSize, sampleRate);
 
-  fftL.logAverages(22, 3);
-  fftR.logAverages(22, 3);
+  fftL.logAverages(60, 6);
+  fftR.logAverages(60, 6);
 
   int totalChunks = (samplesL.length / fftSize) + 1;
   int fftSlices = fftL.avgSize();
