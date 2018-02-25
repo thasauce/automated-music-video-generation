@@ -125,13 +125,13 @@ void draw() {
           fill(255, 255, 255);
           rotate(PI/2);
           translate(4, -13 + (-i * 9));
-          rect(0, -5, 4 + sqrt(value) * 10, 14);
+          rect(0, -5, 4 + sqrt(value) * 11, 14);
         } else {
           // Right channel value
           fill(255, 255, 250);
           rotate(-PI/2);
           translate(4, i * 9);
-          rect(0, -5, 4 + sqrt(value) * 10, 14);
+          rect(0, -5, 4 + sqrt(value) * 11, 14);
         }
         popMatrix();
       }
@@ -166,6 +166,9 @@ void audioToTextFile(String fileName) {
 
   fftL.logAverages(60, 6);
   fftR.logAverages(60, 6);
+  
+  fftL.window(FFT.HANN);
+  fftR.window(FFT.HANN);
 
   int totalChunks = (samplesL.length / fftSize) + 1;
   int fftSlices = fftL.avgSize();
