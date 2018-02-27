@@ -17,6 +17,10 @@ AudioMetaData trackData;
 PImage bg;
 PFont f;
 
+float[][] leftChannelAveraging;
+float[][] rightChannelAveraging;
+
+
 /*
    Example to visualize sound frequencies from
    an audio file.
@@ -88,6 +92,9 @@ void setup() {
   f = createFont("Roboto-Medium.ttf", 24);
   textFont(f);
   textAlign(LEFT);
+  
+  leftChannelAveraging = new float[55][4];
+  rightChannelAveraging = new float[55][4];
 }
 void draw() {
   String line;
@@ -139,13 +146,19 @@ void draw() {
           fill(255, 255, 255);
           rotate(PI/2);
           translate(4, -13 + (-i * 9));
-          rect(0, -5, 4 + sqrt(value) * 11, 14);
+          float[] leftChannel = leftChannelAveraging[i/2];
+          System.arraycopy(leftChannel, 0, leftChannel, 1, 3);
+          leftChannel[0] = sqrt(value);
+          rect(0, -5, 4 + average(leftChannel) * 11, 14);
         } else {
           // Right channel value
           fill(255, 255, 250);
           rotate(-PI/2);
           translate(4, i * 9);
-          rect(0, -5, 4 + sqrt(value) * 11, 14);
+          float[] rightChannel = rightChannelAveraging[i/2 -1];
+          System.arraycopy(rightChannel, 0, rightChannel, 1, 3);
+          rightChannel[0] = sqrt(value);
+          rect(0, -5, 4 + average(rightChannel) * 11, 14);
         }
         popMatrix();
       }
@@ -224,4 +237,11 @@ void audioToTextFile(String fileName, AudioSample track) {
   output.flush();
   output.close();
   println("Sound analysis done");
+}
+
+float average(float[] array) {
+  float sum = 0;
+  for (float d : array) sum += d;
+  
+  return sum / array.length;
 }
