@@ -5,14 +5,17 @@ import ddf.minim.spi.*;
 
 VideoExport videoExport;
 
-String audioFilePath = "test.mp3";
+String audioFilePath = "test2.mp3";
 
 String SEP = "|";
 float movieFPS = 60;
 float frameDuration = 1 / movieFPS;
 BufferedReader reader;
-
+Minim minim;
+AudioSample track;
+AudioMetaData trackData;
 PImage bg;
+PFont f;
 
 /*
    Example to visualize sound frequencies from
@@ -58,13 +61,16 @@ void setup() {
   // with the FFT analysis.
   // It uses Minim, because the standard
   // Sound library did not work in my system.
+  minim = new Minim(this);
+  track = minim.loadSample(audioFilePath, 2048);
+  trackData = track.getMetaData();
 
   // You could comment out the next line once you
   // have produced the txt file to speed up
   // experimentation. Otherwise every time you
   // run this program it re-generates the FFT
   // analysis.
-  audioToTextFile(audioFilePath);
+  audioToTextFile(audioFilePath, track);
 
   // Now open the text file we just created for reading
   reader = createReader(audioFilePath + ".txt");
@@ -77,6 +83,11 @@ void setup() {
   videoExport.startMovie();
   
   bg = loadImage("bg.jpg");
+  
+  // Create the font
+  f = createFont("Roboto-Medium.ttf", 24);
+  textFont(f);
+  textAlign(LEFT);
 }
 void draw() {
   String line;
@@ -112,6 +123,9 @@ void draw() {
     while (videoExport.getCurrentTime() < soundTime + frameDuration * 0.5) {
       background(bg);
       noStroke();
+      
+      drawTrackInfo();
+      
       // Iterate over all our data points (different
       // audio frequencies. First bass, then hihats)
       for (int i=1; i<p.length; i++) {
@@ -140,17 +154,21 @@ void draw() {
   }
 }
 
+void drawTrackInfo() {
+  fill(255, 255, 255);
+  textSize(60);
+  text(trackData.title(), 200, 200);
+  
+  textSize(48);
+  text(trackData.author(), 200, 280);
+}
+
 // Minim based audio FFT to data text file conversion.
 // Non real-time, so you don't wait 5 minutes for a 5 minute song :)
 // You can look at the produced txt file in the data folder
 // after running this program to see how it looks like.
-void audioToTextFile(String fileName) {
-  PrintWriter output;
-
-  Minim minim = new Minim(this);
-  output = createWriter(dataPath(fileName + ".txt"));
-
-  AudioSample track = minim.loadSample(fileName, 2048);
+void audioToTextFile(String fileName, AudioSample track) {
+  PrintWriter output = createWriter(dataPath(fileName + ".txt"));
 
   int fftSize = 1024;
   float sampleRate = track.sampleRate();
