@@ -5,7 +5,7 @@ import ddf.minim.spi.*;
 
 VideoExport videoExport;
 
-String audioFilePath = "test2.mp3";
+String audioFilePath = "test.mp3";
 
 String SEP = "|";
 float movieFPS = 60;
@@ -15,10 +15,16 @@ Minim minim;
 AudioSample track;
 AudioMetaData trackData;
 PImage bg;
+PImage logo;
 PFont f;
 
 float[][] leftChannelAveraging;
 float[][] rightChannelAveraging;
+
+float minLogoWidth;
+float minLogoHeight;
+float currentLogoWidth;
+float currentLogoHeight;
 
 
 /*
@@ -87,6 +93,11 @@ void setup() {
   videoExport.startMovie();
   
   bg = loadImage("bg.jpg");
+  logo = loadImage("logo.png");
+  minLogoWidth = logo.width * .8;
+  minLogoHeight = logo.height * .8;
+  currentLogoWidth = minLogoWidth;
+  currentLogoHeight = minLogoHeight;
   
   // Create the font
   f = createFont("Roboto-Medium.ttf", 24);
@@ -133,20 +144,33 @@ void draw() {
       
       drawTrackInfo();
       
+      if(boolean(p[1])) {
+        currentLogoWidth = logo.width;
+        currentLogoHeight = logo.height;
+      } else {
+        currentLogoWidth = currentLogoWidth * .99;
+        currentLogoHeight = currentLogoHeight * .99;
+        
+        if (currentLogoWidth < minLogoWidth) currentLogoWidth = minLogoWidth;
+        if (currentLogoHeight < minLogoHeight) currentLogoHeight = minLogoHeight;
+      }
+      
+      image(logo, width * .7 - currentLogoWidth/2, height * .4 - currentLogoHeight/2, currentLogoWidth, currentLogoHeight);
+      
       // Iterate over all our data points (different
       // audio frequencies. First bass, then hihats)
-      for (int i=1; i<p.length; i++) {
+      for (int i=2; i<p.length; i++) {
         float value = float(p[i]);
         // do something with value (set positions,
         // sizes, colors, angles, etc)
         pushMatrix();
         translate(30, height/2);
-        if(i%2 == 1) {
+        if(i%2 == 0) {
           // Left channel value
           fill(255, 255, 255);
           rotate(PI/2);
           translate(4, -13 + (-i * 9));
-          float[] leftChannel = leftChannelAveraging[i/2];
+          float[] leftChannel = leftChannelAveraging[i/2 - 1];
           System.arraycopy(leftChannel, 0, leftChannel, 1, 3);
           leftChannel[0] = sqrt(value);
           rect(0, -5, 4 + average(leftChannel) * 11, 14);
@@ -155,7 +179,7 @@ void draw() {
           fill(255, 255, 250);
           rotate(-PI/2);
           translate(4, i * 9);
-          float[] rightChannel = rightChannelAveraging[i/2 -1];
+          float[] rightChannel = rightChannelAveraging[i/2 - 1];
           System.arraycopy(rightChannel, 0, rightChannel, 1, 3);
           rightChannel[0] = sqrt(value);
           rect(0, -5, 4 + average(rightChannel) * 11, 14);
@@ -188,12 +212,14 @@ void audioToTextFile(String fileName, AudioSample track) {
 
   float[] fftSamplesL = new float[fftSize];
   float[] fftSamplesR = new float[fftSize];
+  float[] beatSamplesMix = new float[fftSize];
 
   float[] samplesL = track.getChannel(AudioSample.LEFT);
-  float[] samplesR = track.getChannel(AudioSample.RIGHT);  
+  float[] samplesR = track.getChannel(AudioSample.RIGHT);
 
   FFT fftL = new FFT(fftSize, sampleRate);
   FFT fftR = new FFT(fftSize, sampleRate);
+  BeatDetect beat = new BeatDetect();
 
   fftL.logAverages(60, 6);
   fftR.logAverages(60, 6);
@@ -207,16 +233,22 @@ void audioToTextFile(String fileName, AudioSample track) {
   for (int ci = 0; ci < totalChunks; ++ci) {
     int chunkStartIndex = ci * fftSize;   
     int chunkSize = min( samplesL.length - chunkStartIndex, fftSize );
+    
 
-    System.arraycopy( samplesL, chunkStartIndex, fftSamplesL, 0, chunkSize);      
-    System.arraycopy( samplesR, chunkStartIndex, fftSamplesR, 0, chunkSize);      
+    System.arraycopy( samplesL, chunkStartIndex, fftSamplesL, 0, chunkSize);
+    System.arraycopy( samplesR, chunkStartIndex, fftSamplesR, 0, chunkSize);
     if ( chunkSize < fftSize ) {
       java.util.Arrays.fill( fftSamplesL, chunkSize, fftSamplesL.length - 1, 0.0 );
       java.util.Arrays.fill( fftSamplesR, chunkSize, fftSamplesR.length - 1, 0.0 );
     }
+    
+    for (int i = 0; i < fftSamplesL.length; i++) {
+      beatSamplesMix[i] = fftSamplesL[i]/2 + fftSamplesR[i]/2;
+    }
 
     fftL.forward( fftSamplesL );
     fftR.forward( fftSamplesL );
+    beat.detect(beatSamplesMix);
 
     // The format of the saved txt file.
     // The file contains many rows. Each row looks like this:
@@ -227,6 +259,11 @@ void audioToTextFile(String fileName, AudioSample track) {
     // and they go towards high frequency as we advance towards
     // the end of the line.
     StringBuilder msg = new StringBuilder(nf(chunkStartIndex/sampleRate, 0, 3).replace(',', '.'));
+    if ( beat.isOnset() ) {
+      msg.append("|TRUE");
+    } else {
+      msg.append("|FALSE");
+    }
     for (int i=0; i<fftSlices; ++i) {
       msg.append(SEP + nf(fftL.getAvg(i), 0, 4).replace(',', '.'));
       msg.append(SEP + nf(fftR.getAvg(i), 0, 4).replace(',', '.'));
